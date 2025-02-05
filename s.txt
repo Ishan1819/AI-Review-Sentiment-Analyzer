@@ -1,0 +1,87 @@
+from flask import Flask, request, jsonify, render_template
+import openai
+from supabase import create_client, Client
+import os
+from textblob import TextBlob
+
+supabase_url = "https://rnejwdzvyoaunmmewvar.supabase.co"
+supabase_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuZWp3ZHp2eW9hdW5tbWV3dmFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg2MDYzOTMsImV4cCI6MjA1NDE4MjM5M30.MG1nN-r4Jfw80pGDND3gKICAxevvleTU4LaJ20H9ay0"
+
+supabase: Client = create_client(supabase_url, supabase_key)
+app = Flask(__name__)
+
+def get_sentiment(review_text: str) -> str:
+    try:
+        blob = TextBlob(review_text)
+        sentiment_score = blob.sentiment.polarity
+        
+        if sentiment_score > 0:
+            return 'positive'
+        else:
+            return 'negative'
+        
+    except Exception as e:
+        print(f"Error getting sentiment: {e}")
+        raise Exception("Error getting sentiment")
+
+@app.route('/')
+def home():
+    return render_template('index.html')  # Render the HTML form
+
+def add_review_to_db(sentiment, review_text):
+    if sentiment == 'positive':
+        data = {"positive": review_text, "negative":None}
+    else:
+        data = {"positive": None, "negative":review_text}
+        
+    response = supabase.table("review").insert(data).execute()
+    if response.status_code != 201:
+        raise Exception("Error adding review to database")
+    
+    
+@app.route('/add_review', methods=['POST'])
+def add_review():
+    data = request.get_json()
+    if 'review' not in data:
+        return jsonify({"error": "Review is required"}), 400
+    
+    review_text = data['review']
+    
+    try:
+        sentiment = get_sentiment(review_text)
+        add_review_to_db(sentiment, review_text)
+        return jsonify({"message": "Review added successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
+# from flask import Flask
+
+# app = Flask(__name__)
+
+# @app.route('/')
+# def home():
+#     return "Hello, World!"
+
+# if __name__ == '__main__':
+#     app.run(debug=True)
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Review</title>
+</head>
+<body>
+    <h1>Submit Your Review</h1>
+    <form action="/add_review" method="POST">
+        <label for="review">Review:</label><br>
+        <textarea id="review" name="review" rows="4" cols="50" required></textarea><br><br>
+        <input type="submit" value="Submit Review">
+    </form>
+</body>
+</html>

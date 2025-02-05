@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Add Review and View Summary</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      h1 {
+        color: #333;
+      }
+      textarea {
+        width: 100%;
+        padding: 10px;
+        margin-top: 5px;
+      }
+      .container {
+        margin-top: 30px;
+      }
+      .summary {
+        margin-top: 20px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        background-color: #f9f9f9;
+      }
+      .summary h3 {
+        margin: 0;
+      }
+      .summary p {
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Submit Your Review</h1>
+    <form action="/add_review" method="POST">
+      <label for="review">Review:</label><br />
+      <textarea id="review" name="review" rows="4" cols="50" required></textarea
+      ><br /><br />
+      <input type="submit" value="Submit Review" />
+    </form>
+
+    <div class="container">
+      <h2>Review Summary (Last 100 Reviews)</h2>
+      <button onclick="fetchSummary()">Get Summary</button>
+
+      <div class="summary" id="summarySection" style="display: none">
+        <h3>Summary:</h3>
+        <p id="summaryText"></p>
+      </div>
+    </div>
+
+    <script>
+      // Function to fetch the summary from the server
+      function fetchSummary() {
+        fetch("/summarize_reviews", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            console.log(data); // For debugging
+            if (data.summary) {
+              document.getElementById("summarySection").style.display = "block";
+              document.getElementById("summaryText").innerText = data.summary;
+            } else {
+              alert("No summary available");
+            }
+          })
+          .catch((error) => {
+            console.error(
+              "There was a problem with the fetch operation:",
+              error
+            );
+            alert("Error fetching summary: " + error.message);
+          });
+      }
+    </script>
+  </body>
+</html>
